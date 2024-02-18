@@ -330,10 +330,14 @@ def colorEncode(labelmap, colors):
 
 @torch.no_grad()
 def prepare_batch_sem(meta, batch=1):
+    if type(meta['control']) != str:
+        sem = meta['control']
+    else:
+        sem = Image.open(meta['control'])
 
     pil_to_tensor = transforms.PILToTensor()
 
-    sem = Image.open( meta['sem'] ).convert("L") # semantic class index 0,1,2,3,4 in uint8 representation 
+    sem = sem.convert("L") # semantic class index 0,1,2,3,4 in uint8 representation 
     sem = TF.center_crop(sem, min(sem.size))
     sem = sem.resize( (512, 512), Image.NEAREST ) # acorrding to official, it is nearest by default, but I don't know why it can prodice new values if not specify explicitly
     try:
@@ -341,6 +345,7 @@ def prepare_batch_sem(meta, batch=1):
         Image.fromarray(sem_color).save("sem_vis.png")
     except:
         pass
+
     sem = pil_to_tensor(sem)[0,:,:]
     input_label = torch.zeros(152, 512, 512)
     sem = input_label.scatter_(0, sem.long().unsqueeze(0), 1.0)
@@ -496,6 +501,8 @@ if __name__ == "__main__":
             image = image[:, :, ::-1].copy()
             control = cv2.Canny(image, 100, 200)
             control = F.to_pil_image(torch.tensor(control)).convert('RGB')
+        elif args.task == 'seg':
+            control = Image.fromarray(np.array(control).astype(np.uint8))
 
         meta = dict(
             idx=idx,
