@@ -345,7 +345,7 @@ def prepare_batch_sem(meta, batch=1):
 
 
 @torch.no_grad()
-def run(meta, config, starting_noise=None):
+def run(meta, config, starting_noise, model, autoencoder, text_encoder, diffusion):
 
 
     # - - - - - prepare batch - - - - - #
@@ -403,14 +403,13 @@ def run(meta, config, starting_noise=None):
         grounding_extra_input = grounding_downsampler_input.prepare(batch)
 
     input = dict(
-                x = starting_noise,
-                timesteps = None,
-                context = context,
-                grounding_input = grounding_input,
-                inpainting_extra_input = inpainting_extra_input,
-                grounding_extra_input = grounding_extra_input,
-
-            )
+        x = starting_noise,
+        timesteps = None,
+        context = context,
+        grounding_input = grounding_input,
+        inpainting_extra_input = inpainting_extra_input,
+        grounding_extra_input = grounding_extra_input,
+    )
 
 
     # - - - - - start sampling - - - - - #
@@ -439,7 +438,7 @@ def run(meta, config, starting_noise=None):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--folder", type=str,  default="generation_samples", help="root folder for output")
-
+    parser.add_argument("--ckpt", type=str,  default="./gligen_checkpoints/checkpoint_generation_depth.pth")
     parser.add_argument("--dataset_name", type=str,  default="limingcv/MultiGen-20M_depth_eval")
     parser.add_argument("--cache_dir", type=str,  default="data/huggingface_datasets")
     parser.add_argument("--split", type=str,  default="validation")
@@ -455,10 +454,24 @@ if __name__ == "__main__":
 
     dataset = load_dataset(args.dataset_name, cache_dir=args.cache_dir, split=args.split)
 
+    # - - - - - prepare models - - - - - #
+    model, autoencoder, text_encoder, diffusion, config = load_ckpt(args.ckpt)
+
+    grounding_tokenizer_input = instantiate_from_config(config['grounding_tokenizer_input'])
+    model.grounding_tokenizer_input = grounding_tokenizer_input
+
+    grounding_downsampler_input = None
+    if "grounding_downsampler_input" in config:
+        grounding_downsampler_input = instantiate_from_config(config['grounding_downsampler_input'])
+
+    # - - - - - update config from args - - - - - #
+    config.update( vars(args) )
+    config = OmegaConf.create(config)
+
     for idx, data in enumerate(dataset):
         meta = dict(
             idx=idx,
-            ckpt="./gligen_checkpoints/checkpoint_generation_depth.pth",
+            ckpt=args.ckpt,
             prompt=data[args.prompt_column],
             depth=data[args.control_column],
             alpha_type=[0.7, 0, 0.3],
@@ -468,4 +481,4 @@ if __name__ == "__main__":
         starting_noise = torch.randn(args.batch_size, 4, 64, 64).to(device)
         starting_noise = None
 
-        run(meta, args, starting_noise)
+        run(meta, args, starting_noise, model, autoencoder, text_encoder, diffusion)
