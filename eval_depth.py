@@ -342,7 +342,6 @@ def prepare_batch_sem(meta, batch=1):
     sem = sem.resize( (512, 512), Image.NEAREST ) # acorrding to official, it is nearest by default, but I don't know why it can prodice new values if not specify explicitly
     try:
         sem_color = colorEncode(np.array(sem), loadmat('color150.mat')['colors'])
-        Image.fromarray(sem_color).save("sem_vis.png")
     except:
         pass
 
@@ -504,6 +503,13 @@ if __name__ == "__main__":
         elif args.task == 'seg':
             control = Image.fromarray(np.array(control).astype(np.uint8))
 
+        if args.task in ['hed', 'canny', 'depth']:
+            path = os.path.join(args.folder, args.dataset_name, args.task, args.split)
+            if not os.path.exists(f'{path}/annotations'):
+                os.makedirs(f'{path}/annotations')
+            control.save(f'{path}/annotations/{idx}.png')
+            print(f'save to {path}/annotations/{idx}.png')
+
         meta = dict(
             idx=idx,
             ckpt=args.ckpt,
@@ -524,5 +530,6 @@ if __name__ == "__main__":
 
 # python eval_depth.py --ckpt="./gligen_checkpoints/checkpoint_generation_hed.pth" --dataset_name="limingcv/MultiGen-20M_canny_eval" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="text" --control_column="image" --alpha_type="[0.9, 0, 0.1]" --task="hed" --annotator="https://huggingface.co/lllyasviel/Annotators/resolve/main/ControlNetHED.pth"
 
-
 # python eval_depth.py --ckpt="./gligen_checkpoints/checkpoint_generation_canny.pth" --dataset_name="limingcv/MultiGen-20M_canny_eval" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="text" --control_column="image" --alpha_type="[0.9, 0, 0.1]" --task="canny"
+
+# python eval_depth.py --ckpt="./gligen_checkpoints/checkpoint_generation_sem.pth" --dataset_name="limingcv/Captioned_ADE20K" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="prompt" --control_column="seg_map" --alpha_type="[0.7, 0, 0.3]" --task="seg"
