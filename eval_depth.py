@@ -18,6 +18,7 @@ import torchvision.transforms.functional as F
 import torchvision.transforms.functional as TF
 import torchvision.transforms as transforms
 from datasets import load_dataset
+from utils import get_reward_model
 
 device = "cuda"
 
@@ -221,10 +222,14 @@ def prepare_batch_kp(meta, batch=1, max_persons_per_image=8):
 
 @torch.no_grad()
 def prepare_batch_hed(meta, batch=1):
+    if type(meta['control']) != str:
+        hed_edge = meta['control']
+    else:
+        hed_edge = Image.open(meta['control'])
 
     pil_to_tensor = transforms.PILToTensor()
 
-    hed_edge = Image.open(meta['hed_image']).convert("RGB")
+    hed_edge = hed_edge.convert("RGB")
     hed_edge = crop_and_resize(hed_edge)
     hed_edge = ( pil_to_tensor(hed_edge).float()/255 - 0.5 ) / 0.5
 
@@ -454,6 +459,8 @@ if __name__ == "__main__":
     parser.add_argument("--dataset_name", type=str,  default="limingcv/MultiGen-20M_depth_eval")
     parser.add_argument("--cache_dir", type=str,  default="data/huggingface_datasets")
     parser.add_argument("--split", type=str,  default="validation")
+    parser.add_argument("--task", type=str, default='hed')
+    parser.add_argument("--annotator", type=str, default=None)
     parser.add_argument("--prompt_column", type=str,  default="text")
     parser.add_argument("--control_column", type=str,  default="control_depth")
     parser.add_argument("--alpha_type", type=list,  default="[0.7, 0, 0.3]")
@@ -465,15 +472,26 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     dataset = load_dataset(args.dataset_name, cache_dir=args.cache_dir, split=args.split)
+    if args.annotator:
+        annotator = get_reward_model(task=args.task, model_path=args.annotator)
+        annotator.eval()
 
     for idx, data in enumerate(dataset):
+        if args.annotator:
+            image = data['image'].convert("RGB").resize((512, 512))
+            image = F.pil_to_tensor(image).unsqueeze(0) / 255.0
+            control = annotator(image).squeeze(0)
+            control = F.to_pil_image(control).convert('RGB')
+        else:
+            control = data[args.control_column]
+
         meta = dict(
             idx=idx,
             ckpt=args.ckpt,
             prompt=data[args.prompt_column],
-            control=data[args.control_column],
+            control=control,
             alpha_type=[0.7, 0, 0.3],
-            save_folder_name=f"{args.dataset_name}/{args.split}/{idx}"
+            save_folder_name=f"{args.dataset_name}/{args.task}/{args.split}/{idx}"
         )
 
         starting_noise = torch.randn(args.batch_size, 4, 64, 64).to(device)
@@ -481,3 +499,8 @@ if __name__ == "__main__":
 
         with torch.no_grad():
             run(meta, args, starting_noise)
+
+
+# python eval_depth.py --ckpt="./gligen_checkpoints/checkpoint_generation_depth.pth" --dataset_name="limingcv/MultiGen-20M_depth_eval" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="text" --control_column="control_depth" --alpha_type="[0.7, 0, 0.3]" --task='depth'
+
+# python eval_depth.py --ckpt="./gligen_checkpoints/checkpoint_generation_hed.pth" --dataset_name="limingcv/MultiGen-20M_canny_eval" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="text" --control_column="image" --alpha_type="[0.7, 0, 0.3]" --task="hed" --annotator="https://huggingface.co/lllyasviel/Annotators/resolve/main/ControlNetHED.pth"
