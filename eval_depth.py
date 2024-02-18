@@ -251,10 +251,14 @@ def prepare_batch_canny(meta, batch=1):
     edges = PIL.Image.fromarray(edges)
 
     """
+    if type(meta['control']) != str:
+        canny_edge = meta['control']
+    else:
+        canny_edge = Image.open(meta['control'])
 
     pil_to_tensor = transforms.PILToTensor()
 
-    canny_edge = Image.open(meta['canny_image']).convert("RGB")
+    canny_edge = canny_edge.convert("RGB")
     canny_edge = crop_and_resize(canny_edge)
 
     canny_edge = ( pil_to_tensor(canny_edge).float()/255 - 0.5 ) / 0.5
@@ -485,6 +489,14 @@ if __name__ == "__main__":
         else:
             control = data[args.control_column]
 
+        if args.task == 'canny':
+            import cv2
+            image = data['image'].convert("RGB")
+            image = np.array(image)
+            image = image[:, :, ::-1].copy()
+            control = cv2.Canny(image, 100, 200)
+            control = F.to_pil_image(torch.tensor(control)).convert('RGB')
+
         meta = dict(
             idx=idx,
             ckpt=args.ckpt,
@@ -503,4 +515,7 @@ if __name__ == "__main__":
 
 # python eval_depth.py --ckpt="./gligen_checkpoints/checkpoint_generation_depth.pth" --dataset_name="limingcv/MultiGen-20M_depth_eval" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="text" --control_column="control_depth" --alpha_type="[0.7, 0, 0.3]" --task='depth'
 
-# python eval_depth.py --ckpt="./gligen_checkpoints/checkpoint_generation_hed.pth" --dataset_name="limingcv/MultiGen-20M_canny_eval" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="text" --control_column="image" --alpha_type="[0.7, 0, 0.3]" --task="hed" --annotator="https://huggingface.co/lllyasviel/Annotators/resolve/main/ControlNetHED.pth"
+# python eval_depth.py --ckpt="./gligen_checkpoints/checkpoint_generation_hed.pth" --dataset_name="limingcv/MultiGen-20M_canny_eval" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="text" --control_column="image" --alpha_type="[0.9, 0, 0.1]" --task="hed" --annotator="https://huggingface.co/lllyasviel/Annotators/resolve/main/ControlNetHED.pth"
+
+
+# python eval_depth.py --ckpt="./gligen_checkpoints/checkpoint_generation_canny.pth" --dataset_name="limingcv/MultiGen-20M_canny_eval" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="text" --control_column="image" --alpha_type="[0.9, 0, 0.1]" --task="canny"
