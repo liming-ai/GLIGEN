@@ -526,10 +526,10 @@ if __name__ == "__main__":
             run(meta, args, starting_noise)
 
 
-# python eval_depth.py --ckpt="./gligen_checkpoints/checkpoint_generation_depth.pth" --dataset_name="limingcv/MultiGen-20M_depth_eval" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="text" --control_column="control_depth" --alpha_type="[0.7, 0, 0.3]" --task='depth'
+# python eval.py --ckpt="./gligen_checkpoints/checkpoint_generation_depth.pth" --dataset_name="limingcv/MultiGen-20M_depth_eval" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="text" --control_column="control_depth" --alpha_type="[0.7, 0, 0.3]" --task='depth'
 
-# python eval_depth.py --ckpt="./gligen_checkpoints/checkpoint_generation_hed.pth" --dataset_name="limingcv/MultiGen-20M_canny_eval" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="text" --control_column="image" --alpha_type="[0.9, 0, 0.1]" --task="hed" --annotator="https://huggingface.co/lllyasviel/Annotators/resolve/main/ControlNetHED.pth"
+# python eval.py --ckpt="./gligen_checkpoints/checkpoint_generation_hed.pth" --dataset_name="limingcv/MultiGen-20M_canny_eval" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="text" --control_column="image" --alpha_type="[0.9, 0, 0.1]" --task="hed" --annotator="https://huggingface.co/lllyasviel/Annotators/resolve/main/ControlNetHED.pth"
 
-# python eval_depth.py --ckpt="./gligen_checkpoints/checkpoint_generation_canny.pth" --dataset_name="limingcv/MultiGen-20M_canny_eval" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="text" --control_column="image" --alpha_type="[0.9, 0, 0.1]" --task="canny"
+# python eval.py --ckpt="./gligen_checkpoints/checkpoint_generation_canny.pth" --dataset_name="limingcv/MultiGen-20M_canny_eval" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="text" --control_column="image" --alpha_type="[0.9, 0, 0.1]" --task="canny"
 
-# python eval_depth.py --ckpt="./gligen_checkpoints/checkpoint_generation_sem.pth" --dataset_name="limingcv/Captioned_ADE20K" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="prompt" --control_column="seg_map" --alpha_type="[0.7, 0, 0.3]" --task="seg"
+# python eval.py --ckpt="./gligen_checkpoints/checkpoint_generation_sem.pth" --dataset_name="limingcv/Captioned_ADE20K" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="prompt" --control_column="seg_map" --alpha_type="[0.7, 0, 0.3]" --task="seg"
