@@ -177,7 +177,7 @@ def inference(task, language_instruction, grounding_instruction, inpainting_boxe
 
         image_list = [placeholder_image]*valid_phrase_len + [style_image]
         has_image_mask = [0]*valid_phrase_len + [1]
-        
+
         location_list += [ [0.0, 0.0, 1, 0.01]  ] # style image grounding location
 
     if task == 'Grounded Inpainting':
@@ -188,7 +188,7 @@ def inference(task, language_instruction, grounding_instruction, inpainting_boxe
         phrases = phrase_list,
         images = image_list,
         locations = location_list,
-        alpha_type = [alpha_sample, 0, 1.0 - alpha_sample], 
+        alpha_type = [alpha_sample, 0, 1.0 - alpha_sample],
         has_text_mask = has_text_mask,
         has_image_mask = has_image_mask,
         save_folder_name = language_instruction,
