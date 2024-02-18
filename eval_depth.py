@@ -263,10 +263,10 @@ def prepare_batch_canny(meta, batch=1):
 
 @torch.no_grad()
 def prepare_batch_depth(meta, batch=1):
-    if type(meta['depth']) != str:
-        depth = meta['depth']
+    if type(meta['control']) != str:
+        depth = meta['control']
     else:
-        depth = Image.open(meta['depth'])
+        depth = Image.open(meta['control'])
 
     pil_to_tensor = transforms.PILToTensor()
 
@@ -345,8 +345,20 @@ def prepare_batch_sem(meta, batch=1):
 
 
 @torch.no_grad()
-def run(meta, config, starting_noise, model, autoencoder, text_encoder, diffusion):
+def run(meta, config, starting_noise):
+    # - - - - - prepare models - - - - - #
+    model, autoencoder, text_encoder, diffusion, config = load_ckpt(args.ckpt)
 
+    grounding_tokenizer_input = instantiate_from_config(config['grounding_tokenizer_input'])
+    model.grounding_tokenizer_input = grounding_tokenizer_input
+
+    grounding_downsampler_input = None
+    if "grounding_downsampler_input" in config:
+        grounding_downsampler_input = instantiate_from_config(config['grounding_downsampler_input'])
+
+    # - - - - - update config from args - - - - - #
+    config.update( vars(args) )
+    config = OmegaConf.create(config)
 
     # - - - - - prepare batch - - - - - #
     if "keypoint" in meta["ckpt"]:
@@ -444,7 +456,7 @@ if __name__ == "__main__":
     parser.add_argument("--split", type=str,  default="validation")
     parser.add_argument("--prompt_column", type=str,  default="text")
     parser.add_argument("--control_column", type=str,  default="control_depth")
-
+    parser.add_argument("--alpha_type", type=list,  default="[0.7, 0, 0.3]")
     parser.add_argument("--batch_size", type=int, default=4, help="")
     parser.add_argument("--no_plms", action='store_true', help="use DDIM instead. WARNING: I did not test the code yet")
     parser.add_argument("--guidance_scale", type=float,  default=7.5, help="")
@@ -454,26 +466,12 @@ if __name__ == "__main__":
 
     dataset = load_dataset(args.dataset_name, cache_dir=args.cache_dir, split=args.split)
 
-    # - - - - - prepare models - - - - - #
-    model, autoencoder, text_encoder, diffusion, config = load_ckpt(args.ckpt)
-
-    grounding_tokenizer_input = instantiate_from_config(config['grounding_tokenizer_input'])
-    model.grounding_tokenizer_input = grounding_tokenizer_input
-
-    grounding_downsampler_input = None
-    if "grounding_downsampler_input" in config:
-        grounding_downsampler_input = instantiate_from_config(config['grounding_downsampler_input'])
-
-    # - - - - - update config from args - - - - - #
-    config.update( vars(args) )
-    config = OmegaConf.create(config)
-
     for idx, data in enumerate(dataset):
         meta = dict(
             idx=idx,
             ckpt=args.ckpt,
             prompt=data[args.prompt_column],
-            depth=data[args.control_column],
+            control=data[args.control_column],
             alpha_type=[0.7, 0, 0.3],
             save_folder_name=f"{args.dataset_name}/{args.split}/{idx}"
         )
@@ -481,4 +479,5 @@ if __name__ == "__main__":
         starting_noise = torch.randn(args.batch_size, 4, 64, 64).to(device)
         starting_noise = None
 
-        run(meta, args, starting_noise, model, autoencoder, text_encoder, diffusion)
+        with torch.no_grad():
+            run(meta, args, starting_noise)
