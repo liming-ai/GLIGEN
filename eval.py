@@ -202,7 +202,16 @@ def prepare_batch_kp(meta, batch=1, max_persons_per_image=8):
 
     points = torch.zeros(max_persons_per_image*17,2)
     idx = 0
-    for this_person_kp in meta["control"]:
+
+    poses = np.array(meta["control"])
+    indices_to_delete = np.where(~poses.any(axis=(1, 2)))[0]
+    poses = np.delete(poses, indices_to_delete, axis=0)
+
+    max_val = max(max_persons_per_image, poses.shape[0])
+    poses = poses[:max_val, :, :]
+    poses = poses.tolist()
+
+    for this_person_kp in poses:
         for kp in this_person_kp:
             points[idx,0] = kp[0]
             points[idx,1] = kp[1]
@@ -511,6 +520,9 @@ if __name__ == "__main__":
             control = control[:,:, :2] * control[:, :, 2:3]
             control = control / size
             control = control.tolist()
+
+            # path = os.path.join(args.folder, args.dataset_name, args.task, args.split)
+            # data['control_pose'].convert("RGB").save(f'{path}/annotations/{idx}.png')
 
         if args.task in ['hed', 'canny', 'depth']:
             path = os.path.join(args.folder, args.dataset_name, args.task, args.split)
