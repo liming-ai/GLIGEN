@@ -202,7 +202,7 @@ def prepare_batch_kp(meta, batch=1, max_persons_per_image=8):
 
     points = torch.zeros(max_persons_per_image*17,2)
     idx = 0
-    for this_person_kp in meta["locations"]:
+    for this_person_kp in meta["control"]:
         for kp in this_person_kp:
             points[idx,0] = kp[0]
             points[idx,1] = kp[1]
@@ -502,6 +502,15 @@ if __name__ == "__main__":
             control = F.to_pil_image(torch.tensor(control)).convert('RGB')
         elif args.task == 'seg':
             control = Image.fromarray(np.array(control).astype(np.uint8))
+        elif args.task == 'pose':
+            image = data['image'].convert("RGB")
+            size = np.array(image.size)
+
+            control = data['pose']
+            control = np.array(control)
+            control = control[:,:, :2] * control[:, :, 2:3]
+            control = control / size
+            control = control.tolist()
 
         if args.task in ['hed', 'canny', 'depth']:
             path = os.path.join(args.folder, args.dataset_name, args.task, args.split)
@@ -533,3 +542,7 @@ if __name__ == "__main__":
 # python eval.py --ckpt="./gligen_checkpoints/checkpoint_generation_canny.pth" --dataset_name="limingcv/MultiGen-20M_canny_eval" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="text" --control_column="image" --alpha_type="[0.9, 0, 0.1]" --task="canny"
 
 # python eval.py --ckpt="./gligen_checkpoints/checkpoint_generation_sem.pth" --dataset_name="limingcv/Captioned_ADE20K" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="prompt" --control_column="seg_map" --alpha_type="[0.7, 0, 0.3]" --task="seg"
+
+# python eval.py --ckpt="./gligen_checkpoints/checkpoint_generation_keypoint.pth" --dataset_name="limingcv/HumanArtv2" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="prompt" --control_column='control_pose' --alpha_type="[0.3, 0, 0.7]" --task="pose"
+
+# python eval.py --ckpt="./gligen_checkpoints/checkpoint_generation_keypoint.pth" --dataset_name="limingcv/Captioned_COCOPose" --cache_dir="data/huggingface_datasets" --split="validation" --prompt_column="prompt" --control_column='control_pose' --alpha_type="[0.3, 0, 0.7]" --task="pose"
